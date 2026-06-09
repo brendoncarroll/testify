@@ -18,25 +18,25 @@ import (
 	"unicode/utf8"
 
 	// Wrapper around gopkg.in/yaml.v3
-	"github.com/stretchr/testify/assert/yaml"
-	"github.com/stretchr/testify/internal/difflib"
-	"github.com/stretchr/testify/internal/spew"
+	"github.com/brendoncarroll/testify/assert/yaml"
+	"github.com/brendoncarroll/testify/internal/difflib"
+	"github.com/brendoncarroll/testify/internal/spew"
 )
 
 //go:generate sh -c "cd ../_codegen && go build && cd - && ../_codegen/_codegen -output-package=assert -template=assertion_format.go.tmpl"
 
 // TestingT is an interface wrapper around *testing.T
 type TestingT interface {
-	Errorf(format string, args ...interface{})
+	Errorf(format string, args ...any)
 }
 
 // ComparisonAssertionFunc is a common function prototype when comparing two values.  Can be useful
 // for table driven tests.
-type ComparisonAssertionFunc = func(TestingT, interface{}, interface{}, ...interface{}) bool
+type ComparisonAssertionFunc[T any] func(TestingT, T, T, ...interface{}) bool
 
 // ValueAssertionFunc is a common function prototype when validating a single value.  Can be useful
 // for table driven tests.
-type ValueAssertionFunc = func(TestingT, interface{}, ...interface{}) bool
+type ValueAssertionFunc[T any] func(TestingT, T, ...interface{}) bool
 
 // BoolAssertionFunc is a common function prototype when validating a bool value.  Can be useful
 // for table driven tests.
@@ -463,7 +463,7 @@ func isType(expectedType, object interface{}) bool {
 // IsType asserts that the specified objects are of the same type.
 //
 //	assert.IsType(t, &MyStruct{}, &MyStruct{})
-func IsType(t TestingT, expectedType, object interface{}, msgAndArgs ...interface{}) bool {
+func IsType[T any](t TestingT, expectedType, object T, msgAndArgs ...interface{}) bool {
 	if isType(expectedType, object) {
 		return true
 	}
@@ -476,7 +476,7 @@ func IsType(t TestingT, expectedType, object interface{}, msgAndArgs ...interfac
 // IsNotType asserts that the specified objects are not of the same type.
 //
 //	assert.IsNotType(t, &NotMyStruct{}, &MyStruct{})
-func IsNotType(t TestingT, theType, object interface{}, msgAndArgs ...interface{}) bool {
+func IsNotType[T any](t TestingT, theType, object T, msgAndArgs ...interface{}) bool {
 	if !isType(theType, object) {
 		return true
 	}
@@ -493,7 +493,7 @@ func IsNotType(t TestingT, theType, object interface{}, msgAndArgs ...interface{
 // Pointer variable equality is determined based on the equality of the
 // referenced values (as opposed to the memory addresses). Function equality
 // cannot be determined and will always fail.
-func Equal(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func Equal[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -503,11 +503,11 @@ func Equal(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) 
 	}
 
 	if !ObjectsAreEqual(expected, actual) {
-		diff := diff(expected, actual)
-		expected, actual = formatUnequalValues(expected, actual)
+		diffStr := diff(expected, actual)
+		eStr, aStr := formatUnequalValues(expected, actual)
 		return Fail(t, fmt.Sprintf("Not equal: \n"+
 			"expected: %s\n"+
-			"actual  : %s%s", expected, actual, diff), msgAndArgs...)
+			"actual  : %s%s", eStr, aStr, diffStr), msgAndArgs...)
 	}
 
 	return true
@@ -532,7 +532,7 @@ func validateEqualArgs(expected, actual interface{}) error {
 //
 // Both arguments must be pointer variables. Pointer variable sameness is
 // determined based on the equality of both type and value.
-func Same(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func Same[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -546,7 +546,7 @@ func Same(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) b
 		// both are pointers but not the same type & pointing to the same address
 		return Fail(t, fmt.Sprintf("Not same: \n"+
 			"expected: %[2]s (%[1]T)(%[1]p)\n"+
-			"actual  : %[4]s (%[3]T)(%[3]p)", expected, truncatingFormat("%#v", expected), actual, truncatingFormat("%#v", actual)), msgAndArgs...)
+			"actual  : %[4]s (%[3]T)(%[3]p)", any(expected), truncatingFormat("%#v", expected), any(actual), truncatingFormat("%#v", actual)), msgAndArgs...)
 	}
 
 	return true
@@ -558,7 +558,7 @@ func Same(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) b
 //
 // Both arguments must be pointer variables. Pointer variable sameness is
 // determined based on the equality of both type and value.
-func NotSame(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func NotSame[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -572,7 +572,7 @@ func NotSame(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}
 	if same {
 		return Fail(t, fmt.Sprintf(
 			"Expected and actual point to the same object: %p %s",
-			expected, truncatingFormat("%#v", expected)), msgAndArgs...)
+			any(expected), truncatingFormat("%#v", expected)), msgAndArgs...)
 	}
 	return true
 }
@@ -632,17 +632,17 @@ func truncatingFormat(format string, data interface{}) string {
 // type and equal.
 //
 //	assert.EqualValues(t, uint32(123), int32(123))
-func EqualValues(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func EqualValues[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
 
 	if !ObjectsAreEqualValues(expected, actual) {
-		diff := diff(expected, actual)
-		expected, actual = formatUnequalValues(expected, actual)
+		diffStr := diff(expected, actual)
+		eStr, aStr := formatUnequalValues(expected, actual)
 		return Fail(t, fmt.Sprintf("Not equal: \n"+
 			"expected: %s\n"+
-			"actual  : %s%s", expected, actual, diff), msgAndArgs...)
+			"actual  : %s%s", eStr, aStr, diffStr), msgAndArgs...)
 	}
 
 	return true
@@ -658,7 +658,7 @@ func EqualValues(t TestingT, expected, actual interface{}, msgAndArgs ...interfa
 //	 }
 //	 assert.EqualExportedValues(t, S{1, 2}, S{1, 3}) => true
 //	 assert.EqualExportedValues(t, S{1, 2}, S{2, 3}) => false
-func EqualExportedValues(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func EqualExportedValues[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -670,15 +670,15 @@ func EqualExportedValues(t TestingT, expected, actual interface{}, msgAndArgs ..
 		return Fail(t, fmt.Sprintf("Types expected to match exactly\n\t%v != %v", aType, bType), msgAndArgs...)
 	}
 
-	expected = copyExportedFields(expected)
-	actual = copyExportedFields(actual)
+	eCopy := copyExportedFields(expected)
+	aCopy := copyExportedFields(actual)
 
-	if !ObjectsAreEqualValues(expected, actual) {
-		diff := diff(expected, actual)
-		expected, actual = formatUnequalValues(expected, actual)
+	if !ObjectsAreEqualValues(eCopy, aCopy) {
+		diffStr := diff(eCopy, aCopy)
+		eStr, aStr := formatUnequalValues(eCopy, aCopy)
 		return Fail(t, fmt.Sprintf("Not equal (comparing only exported fields): \n"+
 			"expected: %s\n"+
-			"actual  : %s%s", expected, actual, diff), msgAndArgs...)
+			"actual  : %s%s", eStr, aStr, diffStr), msgAndArgs...)
 	}
 
 	return true
@@ -687,7 +687,7 @@ func EqualExportedValues(t TestingT, expected, actual interface{}, msgAndArgs ..
 // Exactly asserts that two objects are equal in value and type.
 //
 //	assert.Exactly(t, int32(123), int64(123))
-func Exactly(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func Exactly[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -705,7 +705,7 @@ func Exactly(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}
 // NotNil asserts that the specified object is not nil.
 //
 //	assert.NotNil(t, err)
-func NotNil(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func NotNil[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	if !isNil(object) {
 		return true
 	}
@@ -737,7 +737,7 @@ func isNil(object interface{}) bool {
 // Nil asserts that the specified object is nil.
 //
 //	assert.Nil(t, err)
-func Nil(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func Nil[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	if isNil(object) {
 		return true
 	}
@@ -788,7 +788,7 @@ func isEmptyValue(objValue reflect.Value) bool {
 //	assert.Empty(t, obj)
 //
 // [Zero values]: https://go.dev/ref/spec#The_zero_value
-func Empty(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func Empty[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	pass := isEmpty(object)
 	if !pass {
 		if h, ok := t.(tHelper); ok {
@@ -805,7 +805,7 @@ func Empty(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
 //	if assert.NotEmpty(t, obj) {
 //	  assert.Equal(t, "two", obj[1])
 //	}
-func NotEmpty(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func NotEmpty[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	pass := !isEmpty(object)
 	if !pass {
 		if h, ok := t.(tHelper); ok {
@@ -831,7 +831,7 @@ func getLen(x interface{}) (length int, ok bool) {
 // Len also fails if the object has a type that len() not accept.
 //
 //	assert.Len(t, mySlice, 3)
-func Len(t TestingT, object interface{}, length int, msgAndArgs ...interface{}) bool {
+func Len[T any](t TestingT, object T, length int, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -880,7 +880,7 @@ func False(t TestingT, value bool, msgAndArgs ...interface{}) bool {
 //
 // Pointer variable equality is determined based on the equality of the
 // referenced values (as opposed to the memory addresses).
-func NotEqual(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func NotEqual[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -899,7 +899,7 @@ func NotEqual(t TestingT, expected, actual interface{}, msgAndArgs ...interface{
 // NotEqualValues asserts that two objects are not equal even when converted to the same type
 //
 //	assert.NotEqualValues(t, obj1, obj2)
-func NotEqualValues(t TestingT, expected, actual interface{}, msgAndArgs ...interface{}) bool {
+func NotEqualValues[T any](t TestingT, expected, actual T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -958,7 +958,7 @@ func containsElement(list interface{}, element interface{}) (ok, found bool) {
 //	assert.Contains(t, "Hello World", "World")
 //	assert.Contains(t, ["Hello", "World"], "World")
 //	assert.Contains(t, {"Hello": "World"}, "Hello")
-func Contains(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+func Contains[S any, E any](t TestingT, s S, contains E, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -980,7 +980,7 @@ func Contains(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bo
 //	assert.NotContains(t, "Hello World", "Earth")
 //	assert.NotContains(t, ["Hello", "World"], "Earth")
 //	assert.NotContains(t, {"Hello": "World"}, "Earth")
-func NotContains(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+func NotContains[S any, E any](t TestingT, s S, contains E, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -1005,22 +1005,22 @@ func NotContains(t TestingT, s, contains interface{}, msgAndArgs ...interface{})
 //	assert.Subset(t, {"x": 1, "y": 2}, {"x": 1})
 //	assert.Subset(t, [1, 2, 3], {1: "one", 2: "two"})
 //	assert.Subset(t, {"x": 1, "y": 2}, ["x"])
-func Subset(t TestingT, list, subset interface{}, msgAndArgs ...interface{}) (ok bool) {
+func Subset[T1 any, T2 any](t TestingT, list T1, subset T2, msgAndArgs ...interface{}) (ok bool) {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
-	if subset == nil {
+	if any(subset) == nil {
 		return true // we consider nil to be equal to the nil set
 	}
 
 	listKind := reflect.TypeOf(list).Kind()
 	if listKind != reflect.Array && listKind != reflect.Slice && listKind != reflect.Map {
-		return Fail(t, fmt.Sprintf("%q has an unsupported type %s", list, listKind), msgAndArgs...)
+		return Fail(t, fmt.Sprintf("%q has an unsupported type %s", any(list), listKind), msgAndArgs...)
 	}
 
 	subsetKind := reflect.TypeOf(subset).Kind()
 	if subsetKind != reflect.Array && subsetKind != reflect.Slice && subsetKind != reflect.Map {
-		return Fail(t, fmt.Sprintf("%q has an unsupported type %s", subset, subsetKind), msgAndArgs...)
+		return Fail(t, fmt.Sprintf("%q has an unsupported type %s", any(subset), subsetKind), msgAndArgs...)
 	}
 
 	if subsetKind == reflect.Map && listKind == reflect.Map {
@@ -1073,11 +1073,11 @@ func Subset(t TestingT, list, subset interface{}, msgAndArgs ...interface{}) (ok
 //	assert.NotSubset(t, {"x": 1, "y": 2}, {"z": 3})
 //	assert.NotSubset(t, [1, 3, 4], {1: "one", 2: "two"})
 //	assert.NotSubset(t, {"x": 1, "y": 2}, ["z"])
-func NotSubset(t TestingT, list, subset interface{}, msgAndArgs ...interface{}) (ok bool) {
+func NotSubset[T1 any, T2 any](t TestingT, list T1, subset T2, msgAndArgs ...interface{}) (ok bool) {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
-	if subset == nil {
+	if any(subset) == nil {
 		return Fail(t, "nil is the empty set which is a subset of every set", msgAndArgs...)
 	}
 
@@ -1137,7 +1137,7 @@ func NotSubset(t TestingT, list, subset interface{}, msgAndArgs ...interface{}) 
 // the number of appearances of each of them in both lists should match.
 //
 // assert.ElementsMatch(t, [1, 3, 2, 3], [1, 3, 3, 2])
-func ElementsMatch(t TestingT, listA, listB interface{}, msgAndArgs ...interface{}) (ok bool) {
+func ElementsMatch[T any](t TestingT, listA, listB T, msgAndArgs ...interface{}) (ok bool) {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -1238,7 +1238,7 @@ func formatListDiff(listA, listB interface{}, extraA, extraB []interface{}) stri
 // assert.NotElementsMatch(t, [1, 1, 2, 3], [1, 2, 3]) -> true
 //
 // assert.NotElementsMatch(t, [1, 2, 3], [1, 2, 4]) -> true
-func NotElementsMatch(t TestingT, listA, listB interface{}, msgAndArgs ...interface{}) (ok bool) {
+func NotElementsMatch[T any](t TestingT, listA, listB T, msgAndArgs ...interface{}) (ok bool) {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -1314,7 +1314,7 @@ func Panics(t TestingT, f PanicTestFunc, msgAndArgs ...interface{}) bool {
 // the recovered panic value equals the expected panic value.
 //
 //	assert.PanicsWithValue(t, "crazy error", func(){ GoCrazy() })
-func PanicsWithValue(t TestingT, expected interface{}, f PanicTestFunc, msgAndArgs ...interface{}) bool {
+func PanicsWithValue[T comparable](t TestingT, expected T, f PanicTestFunc, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -1451,7 +1451,7 @@ func toFloat(x interface{}) (float64, bool) {
 // InDelta asserts that the two numerals are within delta of each other.
 //
 //	assert.InDelta(t, math.Pi, 22/7.0, 0.01)
-func InDelta(t TestingT, expected, actual interface{}, delta float64, msgAndArgs ...interface{}) bool {
+func InDelta[T any](t TestingT, expected, actual T, delta float64, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -1484,11 +1484,11 @@ func InDelta(t TestingT, expected, actual interface{}, delta float64, msgAndArgs
 }
 
 // InDeltaSlice is the same as InDelta, except it compares two slices.
-func InDeltaSlice(t TestingT, expected, actual interface{}, delta float64, msgAndArgs ...interface{}) bool {
+func InDeltaSlice[T any](t TestingT, expected, actual T, delta float64, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
-	if expected == nil || actual == nil ||
+	if any(expected) == nil || any(actual) == nil ||
 		reflect.TypeOf(actual).Kind() != reflect.Slice ||
 		reflect.TypeOf(expected).Kind() != reflect.Slice {
 		return Fail(t, "Parameters must be slice", msgAndArgs...)
@@ -1508,11 +1508,11 @@ func InDeltaSlice(t TestingT, expected, actual interface{}, delta float64, msgAn
 }
 
 // InDeltaMapValues is the same as InDelta, but it compares all values between two maps. Both maps must have exactly the same keys.
-func InDeltaMapValues(t TestingT, expected, actual interface{}, delta float64, msgAndArgs ...interface{}) bool {
+func InDeltaMapValues[T1 any, T2 any](t TestingT, expected T1, actual T2, delta float64, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
-	if expected == nil || actual == nil ||
+	if any(expected) == nil || any(actual) == nil ||
 		reflect.TypeOf(actual).Kind() != reflect.Map ||
 		reflect.TypeOf(expected).Kind() != reflect.Map {
 		return Fail(t, "Arguments must be maps", msgAndArgs...)
@@ -1574,7 +1574,7 @@ func calcRelativeError(expected, actual interface{}) (float64, error) {
 }
 
 // InEpsilon asserts that expected and actual have a relative error less than epsilon
-func InEpsilon(t TestingT, expected, actual interface{}, epsilon float64, msgAndArgs ...interface{}) bool {
+func InEpsilon[T any](t TestingT, expected, actual T, epsilon float64, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -1597,12 +1597,12 @@ func InEpsilon(t TestingT, expected, actual interface{}, epsilon float64, msgAnd
 }
 
 // InEpsilonSlice is the same as InEpsilon, except it compares each value from two slices.
-func InEpsilonSlice(t TestingT, expected, actual interface{}, epsilon float64, msgAndArgs ...interface{}) bool {
+func InEpsilonSlice[T any](t TestingT, expected, actual T, epsilon float64, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
 
-	if expected == nil || actual == nil {
+	if any(expected) == nil || any(actual) == nil {
 		return Fail(t, "Parameters must be slice", msgAndArgs...)
 	}
 
@@ -1762,22 +1762,22 @@ func NotRegexp(t TestingT, rx interface{}, str interface{}, msgAndArgs ...interf
 }
 
 // Zero asserts that i is the zero value for its type.
-func Zero(t TestingT, i interface{}, msgAndArgs ...interface{}) bool {
+func Zero[T any](t TestingT, i T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
-	if i != nil && !reflect.DeepEqual(i, reflect.Zero(reflect.TypeOf(i)).Interface()) {
+	if any(i) != nil && !reflect.DeepEqual(i, reflect.Zero(reflect.TypeOf(i)).Interface()) {
 		return Fail(t, fmt.Sprintf("Should be zero, but was %s", truncatingFormat("%v", i)), msgAndArgs...)
 	}
 	return true
 }
 
 // NotZero asserts that i is not the zero value for its type.
-func NotZero(t TestingT, i interface{}, msgAndArgs ...interface{}) bool {
+func NotZero[T any](t TestingT, i T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
-	if i == nil || reflect.DeepEqual(i, reflect.Zero(reflect.TypeOf(i)).Interface()) {
+	if any(i) == nil || reflect.DeepEqual(i, reflect.Zero(reflect.TypeOf(i)).Interface()) {
 		return Fail(t, fmt.Sprintf("Should not be zero, but was %v", i), msgAndArgs...)
 	}
 	return true

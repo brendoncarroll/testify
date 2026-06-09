@@ -1,8 +1,8 @@
-module github.com/stretchr/testify
+module github.com/brendoncarroll/testify
 
 // This should match the minimum supported version that is tested in
 // .github/workflows/main.yml
-go 1.17
+go 1.21
 
 require (
 	github.com/stretchr/objx v0.5.3

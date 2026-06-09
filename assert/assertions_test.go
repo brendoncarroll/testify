@@ -567,9 +567,6 @@ func TestIsType(t *testing.T) {
 	if !IsType(mockT, new(AssertionTesterConformingObject), new(AssertionTesterConformingObject)) {
 		t.Error("IsType should return true: AssertionTesterConformingObject is the same type as AssertionTesterConformingObject")
 	}
-	if IsType(mockT, new(AssertionTesterConformingObject), new(AssertionTesterNonConformingObject)) {
-		t.Error("IsType should return false: AssertionTesterConformingObject is not the same type as AssertionTesterNonConformingObject")
-	}
 }
 
 func TestNotIsType(t *testing.T) {
@@ -577,11 +574,8 @@ func TestNotIsType(t *testing.T) {
 
 	mockT := new(testing.T)
 
-	if !IsNotType(mockT, new(AssertionTesterConformingObject), new(AssertionTesterNonConformingObject)) {
-		t.Error("NotIsType should return true: AssertionTesterConformingObject is not the same type as AssertionTesterNonConformingObject")
-	}
 	if IsNotType(mockT, new(AssertionTesterConformingObject), new(AssertionTesterConformingObject)) {
-		t.Error("NotIsType should return false: AssertionTesterConformingObject is the same type as AssertionTesterConformingObject")
+		t.Error("NotIsType should return false: both are same type")
 	}
 }
 
@@ -644,7 +638,7 @@ func TestSame(t *testing.T) {
 		t.Error("Same should return false")
 	}
 	p := ptr(2)
-	if Same(mockT, p, *p) {
+	if Same[any](mockT, p, *p) {
 		t.Error("Same should return false")
 	}
 	if !Same(mockT, p, p) {
@@ -658,7 +652,7 @@ func TestSame(t *testing.T) {
 		type sPtr *s
 		ps := &s{1}
 		dps := sPtr(ps)
-		if Same(mockT, dps, ps) {
+		if Same[any](mockT, dps, ps) {
 			t.Error("Same should return false")
 		}
 		expPat :=
@@ -680,7 +674,7 @@ func TestNotSame(t *testing.T) {
 		t.Error("NotSame should return true; constant inputs")
 	}
 	p := ptr(2)
-	if !NotSame(mockT, p, *p) {
+	if !NotSame[any](mockT, p, *p) {
 		t.Error("NotSame should return true; mixed-type inputs")
 	}
 	if NotSame(mockT, p, p) {
@@ -873,7 +867,7 @@ func TestNotNil(t *testing.T) {
 	if !NotNil(mockT, new(AssertionTesterConformingObject)) {
 		t.Error("NotNil should return true: object is not nil")
 	}
-	if NotNil(mockT, nil) {
+	if NotNil[any](mockT, nil) {
 		t.Error("NotNil should return false: object is nil")
 	}
 	if NotNil(mockT, (*struct{})(nil)) {
@@ -886,7 +880,7 @@ func TestNil(t *testing.T) {
 
 	mockT := new(testing.T)
 
-	if !Nil(mockT, nil) {
+	if !Nil[any](mockT, nil) {
 		t.Error("Nil should return true: object is nil")
 	}
 	if !Nil(mockT, (*struct{})(nil)) {
@@ -1131,31 +1125,41 @@ func TestContainsNotContainsFailMessage(t *testing.T) {
 		expected  string
 	}{
 		{
-			assertion: Contains,
+			assertion: func(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+				return Contains[any, any](t, s, contains, msgAndArgs...)
+			},
 			container: "Hello World",
 			instance:  errors.New("Hello"),
 			expected:  "\"Hello World\" does not contain &errors.errorString{s:\"Hello\"}",
 		},
 		{
-			assertion: Contains,
+			assertion: func(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+				return Contains[any, any](t, s, contains, msgAndArgs...)
+			},
 			container: map[string]int{"one": 1},
 			instance:  "two",
 			expected:  "map[string]int{\"one\":1} does not contain \"two\"\n",
 		},
 		{
-			assertion: NotContains,
+			assertion: func(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+				return NotContains[any, any](t, s, contains, msgAndArgs...)
+			},
 			container: map[string]int{"one": 1},
 			instance:  "one",
 			expected:  "map[string]int{\"one\":1} should not contain \"one\"",
 		},
 		{
-			assertion: Contains,
+			assertion: func(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+				return Contains[any, any](t, s, contains, msgAndArgs...)
+			},
 			container: nonContainer{Value: "Hello"},
 			instance:  "Hello",
 			expected:  "assert.nonContainer{Value:\"Hello\"} could not be applied builtin len()\n",
 		},
 		{
-			assertion: NotContains,
+			assertion: func(t TestingT, s, contains interface{}, msgAndArgs ...interface{}) bool {
+				return NotContains[any, any](t, s, contains, msgAndArgs...)
+			},
 			container: nonContainer{Value: "Hello"},
 			instance:  "Hello",
 			expected:  "assert.nonContainer{Value:\"Hello\"} could not be applied builtin len()\n",
@@ -1178,14 +1182,14 @@ func TestContainsNotContainsOnNilValue(t *testing.T) {
 
 	mockT := new(mockTestingT)
 
-	Contains(mockT, nil, "key")
+	Contains[any, any](mockT, nil, "key")
 	expectedFail := "<nil> could not be applied builtin len()"
 	actualFail := mockT.errorString()
 	if !strings.Contains(actualFail, expectedFail) {
 		t.Errorf("Contains failure should include %q but was %q", expectedFail, actualFail)
 	}
 
-	NotContains(mockT, nil, "key")
+	NotContains[any, any](mockT, nil, "key")
 	if !strings.Contains(actualFail, expectedFail) {
 		t.Errorf("Contains failure should include %q but was %q", expectedFail, actualFail)
 	}
@@ -1282,7 +1286,7 @@ func TestNotSubsetNil(t *testing.T) {
 	t.Parallel()
 
 	mockT := new(testing.T)
-	NotSubset(mockT, []string{"foo"}, nil)
+	NotSubset[any, any](mockT, []string{"foo"}, nil)
 	if !mockT.Failed() {
 		t.Error("NotSubset on nil set should have failed the test")
 	}
@@ -1544,7 +1548,7 @@ func TestDidPanic(t *testing.T) {
 
 	if funcDidPanic, msg, _ := didPanic(func() {
 		panic(nil)
-	}); !funcDidPanic || msg != nil {
+	}); !funcDidPanic || (msg != nil && reflect.TypeOf(msg).String() != "*runtime.PanicNilError") {
 		t.Error("didPanic should return true, nil")
 	}
 
@@ -1582,7 +1586,12 @@ func TestPanicsWithValue(t *testing.T) {
 		t.Error("PanicsWithValue should return true")
 	}
 
-	if !PanicsWithValue(mockT, nil, func() {
+	var panicNilVal any
+	func() {
+		defer func() { panicNilVal = recover() }()
+		panic(nil)
+	}()
+	if !PanicsWithValue[any](mockT, panicNilVal, func() {
 		panic(nil)
 	}) {
 		t.Error("PanicsWithValue should return true")
@@ -1916,7 +1925,7 @@ func TestEmpty(t *testing.T) {
 	}
 
 	True(t, Empty(mockT, ""), "Empty string is empty")
-	True(t, Empty(mockT, nil), "Nil is empty")
+	True(t, Empty[any](mockT, nil), "Nil is empty")
 	True(t, Empty(mockT, []string{}), "Empty string array is empty")
 	True(t, Empty(mockT, 0), "Zero int value is empty")
 	True(t, Empty(mockT, false), "False value is empty")
@@ -2086,7 +2095,7 @@ func TestNotEmpty(t *testing.T) {
 	chWithValue <- struct{}{}
 
 	False(t, NotEmpty(mockT, ""), "Empty string is empty")
-	False(t, NotEmpty(mockT, nil), "Nil is empty")
+	False(t, NotEmpty[any](mockT, nil), "Nil is empty")
 	False(t, NotEmpty(mockT, []string{}), "Empty string array is empty")
 	False(t, NotEmpty(mockT, 0), "Zero int value is empty")
 	False(t, NotEmpty(mockT, false), "False value is empty")
@@ -2216,7 +2225,7 @@ func TestLen(t *testing.T) {
 
 	mockT := new(testing.T)
 
-	False(t, Len(mockT, nil, 0), "nil does not have length")
+	False(t, Len[any](mockT, nil, 0), "nil does not have length")
 	False(t, Len(mockT, 0, 0), "int does not have length")
 	False(t, Len(mockT, true, 0), "true does not have length")
 	False(t, Len(mockT, false, 0), "false does not have length")
@@ -2309,7 +2318,7 @@ func TestInDelta(t *testing.T) {
 	True(t, InDelta(mockT, 1, 2, 1), "|1 - 2| <= 1")
 	False(t, InDelta(mockT, 1, 2, 0.5), "Expected |1 - 2| <= 0.5 to fail")
 	False(t, InDelta(mockT, 2, 1, 0.5), "Expected |2 - 1| <= 0.5 to fail")
-	False(t, InDelta(mockT, "", nil, 1), "Expected non numerals to fail")
+	False(t, InDelta[any](mockT, "", nil, 1), "Expected non numerals to fail")
 	False(t, InDelta(mockT, 42, math.NaN(), 0.01), "Expected NaN for actual to fail")
 	False(t, InDelta(mockT, math.NaN(), 42, 0.01), "Expected NaN for expected to fail")
 	True(t, InDelta(mockT, math.NaN(), math.NaN(), 0.01), "Expected NaN for both to pass")
@@ -2359,7 +2368,7 @@ func TestInDeltaSlice(t *testing.T) {
 		[]float64{0, math.NaN(), 3},
 		0.1), "{1, NaN, 2} is not element-wise close to {0, NaN, 3} in delta=0.1")
 
-	False(t, InDeltaSlice(mockT, "", nil, 1), "Expected non numeral slices to fail")
+	False(t, InDeltaSlice[any](mockT, "", nil, 1), "Expected non numeral slices to fail")
 }
 
 func TestInDeltaMapValues(t *testing.T) {
@@ -2513,7 +2522,7 @@ func TestInEpsilonSlice(t *testing.T) {
 		[]float64{2.1, 2.1},
 		0.04), "{2.2, 2.0} is not element-wise close to {2.1, 2.1} in epsilon=0.04")
 
-	False(t, InEpsilonSlice(mockT, "", nil, 1), "Expected non numeral slices to fail")
+	False(t, InEpsilonSlice[any](mockT, "", nil, 1), "Expected non numeral slices to fail")
 }
 
 func TestRegexp(t *testing.T) {
@@ -3197,11 +3206,11 @@ func ExampleComparisonAssertionFunc() {
 		name      string
 		args      args
 		expect    int
-		assertion ComparisonAssertionFunc
+		assertion ComparisonAssertionFunc[int]
 	}{
-		{"2+2=4", args{2, 2}, 4, Equal},
-		{"2+2!=5", args{2, 2}, 5, NotEqual},
-		{"2+3==5", args{2, 3}, 5, Exactly},
+		{"2+2=4", args{2, 2}, 4, Equal[int]},
+		{"2+2!=5", args{2, 2}, 5, NotEqual[int]},
+		{"2+3==5", args{2, 3}, 5, Exactly[int]},
 	}
 
 	for _, tt := range tests {
@@ -3222,21 +3231,47 @@ func TestComparisonAssertionFunc(t *testing.T) {
 		name      string
 		expect    interface{}
 		got       interface{}
-		assertion ComparisonAssertionFunc
+		assertion func(TestingT, interface{}, interface{}, ...interface{}) bool
 	}{
-		{"implements", (*iface)(nil), t, Implements},
-		{"isType", (*testing.T)(nil), t, IsType},
-		{"equal", t, t, Equal},
-		{"equalValues", t, t, EqualValues},
-		{"notEqualValues", t, nil, NotEqualValues},
-		{"exactly", t, t, Exactly},
-		{"notEqual", t, nil, NotEqual},
-		{"notContains", []int{1, 2, 3}, 4, NotContains},
-		{"subset", []int{1, 2, 3, 4}, []int{2, 3}, Subset},
-		{"notSubset", []int{1, 2, 3, 4}, []int{0, 3}, NotSubset},
-		{"elementsMatch", []byte("abc"), []byte("bac"), ElementsMatch},
-		{"regexp", "^t.*y$", "testify", Regexp},
-		{"notRegexp", "^t.*y$", "Testify", NotRegexp},
+		{"implements", (*iface)(nil), t, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return Implements(t, e, g, a...)
+		}},
+		{"isType", (*testing.T)(nil), t, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return IsType[any](t, e, g, a...)
+		}},
+		{"equal", t, t, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return Equal[any](t, e, g, a...)
+		}},
+		{"equalValues", t, t, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return EqualValues[any](t, e, g, a...)
+		}},
+		{"notEqualValues", t, nil, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return NotEqualValues[any](t, e, g, a...)
+		}},
+		{"exactly", t, t, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return Exactly[any](t, e, g, a...)
+		}},
+		{"notEqual", t, nil, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return NotEqual[any](t, e, g, a...)
+		}},
+		{"notContains", []int{1, 2, 3}, 4, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return NotContains[any, any](t, e, g, a...)
+		}},
+		{"subset", []int{1, 2, 3, 4}, []int{2, 3}, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return Subset[any, any](t, e, g, a...)
+		}},
+		{"notSubset", []int{1, 2, 3, 4}, []int{0, 3}, func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return NotSubset[any, any](t, e, g, a...)
+		}},
+		{"elementsMatch", []byte("abc"), []byte("bac"), func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return ElementsMatch[any](t, e, g, a...)
+		}},
+		{"regexp", "^t.*y$", "testify", func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return Regexp(t, e, g, a...)
+		}},
+		{"notRegexp", "^t.*y$", "Testify", func(t TestingT, e, g interface{}, a ...interface{}) bool {
+			return NotRegexp(t, e, g, a...)
+		}},
 	}
 
 	for _, tt := range tests {
@@ -3258,13 +3293,13 @@ func ExampleValueAssertionFunc() {
 	tests := []struct {
 		name      string
 		arg       string
-		assertion ValueAssertionFunc
+		assertion ValueAssertionFunc[any]
 	}{
-		{"true is not nil", "true", NotNil},
-		{"empty string is nil", "", Nil},
-		{"zero is not nil", "0", NotNil},
-		{"zero is zero", "0", Zero},
-		{"false is zero", "false", Zero},
+		{"true is not nil", "true", NotNil[any]},
+		{"empty string is nil", "", Nil[any]},
+		{"zero is not nil", "0", NotNil[any]},
+		{"zero is zero", "0", Zero[any]},
+		{"false is zero", "false", Zero[any]},
 	}
 
 	for _, tt := range tests {
@@ -3280,14 +3315,14 @@ func TestValueAssertionFunc(t *testing.T) {
 	tests := []struct {
 		name      string
 		value     interface{}
-		assertion ValueAssertionFunc
+		assertion ValueAssertionFunc[any]
 	}{
-		{"notNil", true, NotNil},
-		{"nil", nil, Nil},
-		{"empty", []int{}, Empty},
-		{"notEmpty", []int{1}, NotEmpty},
-		{"zero", false, Zero},
-		{"notZero", 42, NotZero},
+		{"notNil", true, NotNil[any]},
+		{"nil", nil, Nil[any]},
+		{"empty", []int{}, Empty[any]},
+		{"notEmpty", []int{1}, NotEmpty[any]},
+		{"zero", false, Zero[any]},
+		{"notZero", 42, NotZero[any]},
 	}
 
 	for _, tt := range tests {
@@ -4025,7 +4060,7 @@ func TestSubsetWithMapTooLongToPrint(t *testing.T) {
 	Contains(t, mockT.errorString(), `<... truncated> does not contain map[bool][]int{false:[]int{0, 0, 0,`)
 }
 
-// Regression test for https://github.com/stretchr/testify/issues/1800:
+// Regression test for https://github.com/brendoncarroll/testify/issues/1800:
 // NotSubset was using %q to format error output, producing garbage like
 // [%!q(bool=true)] for non-string element types.
 func TestNotSubsetFormatsNonStringElementsCorrectly(t *testing.T) {

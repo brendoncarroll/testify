@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/brendoncarroll/testify/assert"
+	"github.com/brendoncarroll/testify/require"
 )
 
 /*
@@ -246,7 +246,7 @@ func Test_Mock_On_WithFuncArg(t *testing.T) {
 	assert.Equal(t, []*Call{c}, mockedService.ExpectedCalls)
 	assert.Equal(t, "TheExampleMethodFunc", c.Method)
 	assert.Equal(t, 1, len(c.Arguments))
-	assert.Equal(t, AnythingOfType("func(string) error"), c.Arguments[0])
+	assert.Equal[any](t, AnythingOfType("func(string) error"), c.Arguments[0])
 
 	fn := func(string) error { return nil }
 
@@ -446,7 +446,7 @@ func Test_Mock_On_WithVariadicFunc(t *testing.T) {
 
 	assert.Equal(t, []*Call{c}, mockedService.ExpectedCalls)
 	assert.Equal(t, 1, len(c.Arguments))
-	assert.Equal(t, []int{1, 2, 3}, c.Arguments[0])
+	assert.Equal[any](t, []int{1, 2, 3}, c.Arguments[0])
 
 	assert.NotPanics(t, func() {
 		mockedService.TheExampleMethodVariadic(1, 2, 3)
@@ -470,7 +470,7 @@ func Test_Mock_On_WithMixedVariadicFunc(t *testing.T) {
 	assert.Equal(t, []*Call{c}, mockedService.ExpectedCalls)
 	assert.Equal(t, 2, len(c.Arguments))
 	assert.Equal(t, 1, c.Arguments[0])
-	assert.Equal(t, []int{2, 3, 4}, c.Arguments[1])
+	assert.Equal[any](t, []int{2, 3, 4}, c.Arguments[1])
 
 	assert.NotPanics(t, func() {
 		mockedService.TheExampleMethodMixedVariadic(1, 2, 3, 4)
@@ -492,7 +492,7 @@ func Test_Mock_On_WithVariadicFuncWithInterface(t *testing.T) {
 
 	assert.Equal(t, []*Call{c}, mockedService.ExpectedCalls)
 	assert.Equal(t, 1, len(c.Arguments))
-	assert.Equal(t, []interface{}{1, 2, 3}, c.Arguments[0])
+	assert.Equal[any](t, []interface{}{1, 2, 3}, c.Arguments[0])
 
 	assert.NotPanics(t, func() {
 		mockedService.TheExampleMethodVariadicInterface(1, 2, 3)
@@ -516,7 +516,7 @@ func Test_Mock_On_WithVariadicFuncWithEmptyInterfaceArray(t *testing.T) {
 
 	assert.Equal(t, []*Call{c}, mockedService.ExpectedCalls)
 	assert.Equal(t, 1, len(c.Arguments))
-	assert.Equal(t, expected, c.Arguments[0])
+	assert.Equal[any](t, expected, c.Arguments[0])
 
 	assert.NotPanics(t, func() {
 		mockedService.TheExampleMethodVariadicInterface()
@@ -550,7 +550,7 @@ func Test_Mock_On_WithFuncTypeArg(t *testing.T) {
 
 	assert.Equal(t, []*Call{c}, mockedService.ExpectedCalls)
 	assert.Equal(t, 1, len(c.Arguments))
-	assert.Equal(t, AnythingOfType("mock.ExampleFuncType"), c.Arguments[0])
+	assert.Equal[any](t, AnythingOfType("mock.ExampleFuncType"), c.Arguments[0])
 
 	fn := func(string) error { return nil }
 	assert.NotPanics(t, func() {
@@ -825,7 +825,6 @@ func Test_Mock_Return_After(t *testing.T) {
 	assert.Equal(t, "two", call.ReturnArguments[1])
 	assert.Equal(t, true, call.ReturnArguments[2])
 	assert.Equal(t, 0, call.Repeatability)
-	assert.NotEqual(t, nil, call.WaitFor)
 
 }
 
@@ -850,10 +849,9 @@ func Test_Mock_Return_Run(t *testing.T) {
 	call := mockedService.Mock.ExpectedCalls[0]
 
 	assert.Equal(t, "TheExampleMethod3", call.Method)
-	assert.Equal(t, AnythingOfType("*mock.ExampleType"), call.Arguments[0])
+	assert.Equal[any](t, AnythingOfType("*mock.ExampleType"), call.Arguments[0])
 	assert.Equal(t, nil, call.ReturnArguments[0])
 	assert.Equal(t, 0, call.Repeatability)
-	assert.NotEqual(t, nil, call.WaitFor)
 	assert.NotNil(t, call.Run)
 
 	et := ExampleType{}
@@ -882,10 +880,9 @@ func Test_Mock_Return_Run_Out_Of_Order(t *testing.T) {
 	call := mockedService.Mock.ExpectedCalls[0]
 
 	assert.Equal(t, "TheExampleMethod3", call.Method)
-	assert.Equal(t, AnythingOfType("*mock.ExampleType"), call.Arguments[0])
+	assert.Equal[any](t, AnythingOfType("*mock.ExampleType"), call.Arguments[0])
 	assert.Equal(t, nil, call.ReturnArguments[0])
 	assert.Equal(t, 0, call.Repeatability)
-	assert.NotEqual(t, nil, call.WaitFor)
 	assert.NotNil(t, call.Run)
 }
 

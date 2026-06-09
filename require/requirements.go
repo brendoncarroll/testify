@@ -2,7 +2,7 @@ package require
 
 // TestingT is an interface wrapper around *testing.T
 type TestingT interface {
-	Errorf(format string, args ...interface{})
+	Errorf(format string, args ...any)
 	FailNow()
 }
 
@@ -12,11 +12,11 @@ type tHelper = interface {
 
 // ComparisonAssertionFunc is a common function prototype when comparing two values.  Can be useful
 // for table driven tests.
-type ComparisonAssertionFunc = func(TestingT, interface{}, interface{}, ...interface{})
+type ComparisonAssertionFunc[T any] func(TestingT, T, T, ...interface{})
 
 // ValueAssertionFunc is a common function prototype when validating a single value.  Can be useful
 // for table driven tests.
-type ValueAssertionFunc = func(TestingT, interface{}, ...interface{})
+type ValueAssertionFunc[T any] func(TestingT, T, ...interface{})
 
 // BoolAssertionFunc is a common function prototype when validating a bool value.  Can be useful
 // for table driven tests.

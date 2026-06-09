@@ -49,7 +49,7 @@ func isOrdered(t TestingT, object interface{}, allowedComparesResults []compareR
 //	assert.IsIncreasing(t, []int{1, 2, 3})
 //	assert.IsIncreasing(t, []float{1, 2})
 //	assert.IsIncreasing(t, []string{"a", "b"})
-func IsIncreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func IsIncreasing[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -61,7 +61,7 @@ func IsIncreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) boo
 //	assert.IsNonIncreasing(t, []int{2, 1, 1})
 //	assert.IsNonIncreasing(t, []float{2, 1})
 //	assert.IsNonIncreasing(t, []string{"b", "a"})
-func IsNonIncreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func IsNonIncreasing[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -73,7 +73,7 @@ func IsNonIncreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) 
 //	assert.IsDecreasing(t, []int{2, 1, 0})
 //	assert.IsDecreasing(t, []float{2, 1})
 //	assert.IsDecreasing(t, []string{"b", "a"})
-func IsDecreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func IsDecreasing[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}
@@ -85,7 +85,7 @@ func IsDecreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) boo
 //	assert.IsNonDecreasing(t, []int{1, 1, 2})
 //	assert.IsNonDecreasing(t, []float{1, 2})
 //	assert.IsNonDecreasing(t, []string{"a", "b"})
-func IsNonDecreasing(t TestingT, object interface{}, msgAndArgs ...interface{}) bool {
+func IsNonDecreasing[T any](t TestingT, object T, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
 	}

@@ -9,6 +9,15 @@ import (
 	"time"
 )
 
+func containsHelperPrefix(helpers map[string]struct{}, prefix string) bool {
+	for k := range helpers {
+		if len(k) > len(prefix) && k[:len(prefix)] == prefix {
+			return true
+		}
+	}
+	return false
+}
+
 func TestCompare(t *testing.T) {
 	t.Parallel()
 
@@ -170,7 +179,7 @@ func TestGreater(t *testing.T) {
 		out := &outputT{buf: bytes.NewBuffer(nil)}
 		False(t, Greater(out, currCase.less, currCase.greater))
 		Contains(t, out.buf.String(), currCase.msg)
-		Contains(t, out.helpers, "github.com/stretchr/testify/assert.Greater")
+		True(t, containsHelperPrefix(out.helpers, "github.com/brendoncarroll/testify/assert.Greater["))
 	}
 }
 
@@ -216,7 +225,7 @@ func TestGreaterOrEqual(t *testing.T) {
 		out := &outputT{buf: bytes.NewBuffer(nil)}
 		False(t, GreaterOrEqual(out, currCase.less, currCase.greater))
 		Contains(t, out.buf.String(), currCase.msg)
-		Contains(t, out.helpers, "github.com/stretchr/testify/assert.GreaterOrEqual")
+		True(t, containsHelperPrefix(out.helpers, "github.com/brendoncarroll/testify/assert.GreaterOrEqual["))
 	}
 }
 
@@ -262,7 +271,7 @@ func TestLess(t *testing.T) {
 		out := &outputT{buf: bytes.NewBuffer(nil)}
 		False(t, Less(out, currCase.greater, currCase.less))
 		Contains(t, out.buf.String(), currCase.msg)
-		Contains(t, out.helpers, "github.com/stretchr/testify/assert.Less")
+		True(t, containsHelperPrefix(out.helpers, "github.com/brendoncarroll/testify/assert.Less["))
 	}
 }
 
@@ -308,7 +317,7 @@ func TestLessOrEqual(t *testing.T) {
 		out := &outputT{buf: bytes.NewBuffer(nil)}
 		False(t, LessOrEqual(out, currCase.greater, currCase.less))
 		Contains(t, out.buf.String(), currCase.msg)
-		Contains(t, out.helpers, "github.com/stretchr/testify/assert.LessOrEqual")
+		True(t, containsHelperPrefix(out.helpers, "github.com/brendoncarroll/testify/assert.LessOrEqual["))
 	}
 }
 
@@ -349,7 +358,7 @@ func TestPositive(t *testing.T) {
 		out := &outputT{buf: bytes.NewBuffer(nil)}
 		False(t, Positive(out, currCase.e))
 		Contains(t, out.buf.String(), currCase.msg)
-		Contains(t, out.helpers, "github.com/stretchr/testify/assert.Positive")
+		True(t, containsHelperPrefix(out.helpers, "github.com/brendoncarroll/testify/assert.Positive["))
 	}
 }
 
@@ -390,7 +399,7 @@ func TestNegative(t *testing.T) {
 		out := &outputT{buf: bytes.NewBuffer(nil)}
 		False(t, Negative(out, currCase.e))
 		Contains(t, out.buf.String(), currCase.msg)
-		Contains(t, out.helpers, "github.com/stretchr/testify/assert.Negative")
+		True(t, containsHelperPrefix(out.helpers, "github.com/brendoncarroll/testify/assert.Negative["))
 	}
 }
 

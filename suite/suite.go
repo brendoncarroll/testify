@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/brendoncarroll/testify/assert"
+	"github.com/brendoncarroll/testify/require"
 )
 
 var matchMethod = flag.String("testify.m", "", "regular expression to select tests of the testify suite to run")
@@ -87,7 +87,7 @@ func recoverAndFailOnPanic(t *testing.T) {
 	failOnPanic(t, r)
 }
 
-func failOnPanic(t *testing.T, r interface{}) {
+func failOnPanic(t *testing.T, r any) {
 	t.Helper()
 	if r != nil {
 		t.Errorf("test panicked: %v\n%s", r, debug.Stack())

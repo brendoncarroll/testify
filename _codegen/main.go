@@ -225,6 +225,81 @@ func (f *testFunc) Qualifier(p *types.Package) string {
 	return p.Name()
 }
 
+func (f *testFunc) TypeParams() string {
+	sig := f.TypeInfo.Type().(*types.Signature)
+	tparams := sig.TypeParams()
+	if tparams == nil || tparams.Len() == 0 {
+		return ""
+	}
+	var p strings.Builder
+	p.WriteString("[")
+	for i := 0; i < tparams.Len(); i++ {
+		if i > 0 {
+			p.WriteString(", ")
+		}
+		tp := tparams.At(i)
+		p.WriteString(tp.Obj().Name())
+		p.WriteString(" ")
+		p.WriteString(types.TypeString(tp.Constraint(), f.Qualifier))
+	}
+	p.WriteString("]")
+	return p.String()
+}
+
+func (f *testFunc) HasTypeParams() bool {
+	sig := f.TypeInfo.Type().(*types.Signature)
+	tparams := sig.TypeParams()
+	return tparams != nil && tparams.Len() > 0
+}
+
+func (f *testFunc) typeParamNames() map[string]bool {
+	names := make(map[string]bool)
+	sig := f.TypeInfo.Type().(*types.Signature)
+	tparams := sig.TypeParams()
+	if tparams == nil {
+		return names
+	}
+	for i := 0; i < tparams.Len(); i++ {
+		names[tparams.At(i).Obj().Name()] = true
+	}
+	return names
+}
+
+func (f *testFunc) AnytizedParams() string {
+	sig := f.TypeInfo.Type().(*types.Signature)
+	params := sig.Params()
+	tpNames := f.typeParamNames()
+	var p strings.Builder
+	comma := ""
+	to := params.Len()
+	var i int
+
+	if sig.Variadic() {
+		to--
+	}
+	for i = 1; i < to; i++ {
+		param := params.At(i)
+		paramType := types.TypeString(param.Type(), f.Qualifier)
+		if tpNames[paramType] {
+			paramType = "any"
+		}
+		p.WriteString(comma)
+		p.WriteString(param.Name())
+		p.WriteString(" ")
+		p.WriteString(paramType)
+		comma = ", "
+	}
+	if sig.Variadic() {
+		param := params.At(params.Len() - 1)
+		fmt.Fprintf(&p, "%s%s ...%s", comma, param.Name(), types.TypeString(param.Type().(*types.Slice).Elem(), f.Qualifier))
+	}
+	return p.String()
+}
+
+func (f *testFunc) AnytizedParamsFormat() string {
+	return strings.Replace(f.AnytizedParams(), "msgAndArgs", "msg string, args", 1)
+}
+
 func (f *testFunc) Params() string {
 	sig := f.TypeInfo.Type().(*types.Signature)
 	params := sig.Params()
@@ -280,7 +355,7 @@ func (f *testFunc) ParamsFormat() string {
 }
 
 func (f *testFunc) ForwardedParamsFormat() string {
-	return strings.Replace(f.ForwardedParams(), "msgAndArgs", "append([]interface{}{msg}, args...)", 1)
+	return strings.Replace(f.ForwardedParams(), "msgAndArgs", "append([]any{msg}, args...)", 1)
 }
 
 func (f *testFunc) Comment() string {

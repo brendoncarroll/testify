@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/brendoncarroll/testify/assert"
+	"github.com/brendoncarroll/testify/require"
 )
 
 // allTestsFilter is a yes filter for testing.RunTests
@@ -426,7 +426,7 @@ func (s *SuiteLoggingTester) TestLoggingPass() {
 
 func (s *SuiteLoggingTester) TestLoggingFail() {
 	s.T().Log("TESTLOGFAIL")
-	assert.NotNil(s.T(), nil) // expected to fail
+	assert.NotNil[any](s.T(), nil) // expected to fail
 }
 
 type StdoutCapture struct {
